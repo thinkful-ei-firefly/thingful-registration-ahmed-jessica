@@ -140,6 +140,76 @@ describe.only('Auth Endpoints', function() {
         .expect(400, {error: 'Password must be longer than 8 characters'})
     })
 
+    it('responds with 400 "Password must be shorter than 72 characters" if password is too long', () => {
+      const registerAttemptLongPassword = {
+        user_name: 'ValidUserName',
+        password: '12345678910111213141516171819202122232425262728293031323334353637383940!',
+        full_name: 'John Doe',
+        nickname: 'John'
+      };
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptLongPassword)
+        .expect(400, {error: 'Password must be shorter than 72 characters'})
+    })
+
+    it('responds with 400 "Password must not start or end with empty spaces" if password begins with empty spaces', () => {
+      const registerAttemptSpaceBeforePassword = {
+        user_name: 'ValidUserName',
+        password: ' Abc123DoReMi!',
+        full_name: 'John Doe',
+        nickname: 'John'
+      };
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptSpaceBeforePassword)
+        .expect(400, {error: 'Password must not start or end with empty spaces'})
+    })
+
+    it('responds with 400 "Password must not start or end with empty spaces" if password ends with empty spaces', () => {
+      const registerAttemptSpaceAfterPassword = {
+        user_name: 'ValidUserName',
+        password: 'Abc123DoReMi! ',
+        full_name: 'John Doe',
+        nickname: 'John'
+      };
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptSpaceAfterPassword)
+        .expect(400, {error: 'Password must not start or end with empty spaces'})
+    })
+
+    it('responds with 400 when password is not sufficiently complex', () => {
+      const registerAttemptSimplePassword = {
+        user_name: 'ValidUserName',
+        password: 'password!',
+        full_name: 'John Doe',
+        nickname: 'John'
+      }; 
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptSimplePassword)
+        .expect(400, {error: `Password must contain 1 upper case, lower case, number and special character`})
+    })
+
+    it('responds with 400 "User name is already taken" when user_name already exists in the database', () => {
+      const registerAttemptDuplicateUser = {
+        user_name: testUser.user_name,
+        password: 'Abc123DoReMi!',
+        full_name: 'John Doe',
+        nickname: 'John'
+      }; 
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptDuplicateUser)
+        .expect(400, {error: `User name is already taken`})
+    })
+
 
   })
 })

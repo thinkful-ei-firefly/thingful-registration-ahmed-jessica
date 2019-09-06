@@ -3,7 +3,7 @@ const app = require('../src/app')
 const helpers = require('./test-helpers')
 const jwt = require('jsonwebtoken')
 
-describe('Auth Endpoints', function() {
+describe.only('Auth Endpoints', function() {
   let db
 
   const { testUsers } = helpers.makeThingsFixtures()
@@ -80,6 +80,66 @@ describe('Auth Endpoints', function() {
          authToken: expectedToken,
        })
    })
+
+  })
+
+  describe('POST/api/auth/register', () => {
+    beforeEach('insert users', () =>
+      helpers.seedUsers(
+        db,
+        testUsers,
+      )
+    )
+
+    const newUserValidCreds = {
+      user_name: 'ValidUserName',
+      password: 'Abc123DoReMi!',
+      full_name: 'John Doe',
+      nickname: 'John'
+    };
+
+    const requiredFields = ['user_name', 'password', 'full_name'];
+
+    it('responds with 201 created when given valid data', () => {
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(newUserValidCreds)
+        .expect(201)
+
+    })
+
+    requiredFields.forEach(field => {
+      const registerAttemptBody = {
+        user_name: 'ValidUserName',
+        password: 'Abc123DoReMi!',
+        full_name: 'John Doe',
+        nickname: 'John'
+      };
+      
+      it(`responds with 400 Required error when ${field} is missing`, () => {
+        delete registerAttemptBody[field]
+
+        return supertest(app)
+          .post('/api/auth/register')
+          .send(registerAttemptBody)
+          .expect(400, { error: `Missing ${field} in request body` })
+      })
+    })
+
+    it('responds with 400 "Password must be longer than 8 characters" if password is too short', () => {
+      const registerAttemptShortPassword = {
+        user_name: 'ValidUserName',
+        password: '1234567',
+        full_name: 'John Doe',
+        nickname: 'John'
+      };
+
+      return supertest(app)
+        .post('/api/auth/register')
+        .send(registerAttemptShortPassword)
+        .expect(400, {error: 'Password must be longer than 8 characters'})
+    })
+
 
   })
 })

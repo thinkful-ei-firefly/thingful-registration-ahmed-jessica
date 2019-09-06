@@ -6,7 +6,8 @@ const authRouter = express.Router();
 const jsonBodyParser = express.json();
 
 authRouter
-  .post('/login', jsonBodyParser, (req, res, next) => {
+  .route('/login')
+  .post(jsonBodyParser, (req, res, next) => {
     const { user_name, password } =  req.body;
     const loginUser = { user_name, password };
     for (const [key, value] of Object.entries(loginUser))
@@ -33,6 +34,28 @@ authRouter
 
       })
       .catch(next);
+  });
+
+authRouter
+  .route('/register')
+  .post(jsonBodyParser, (req, res, next) => {
+    
+    for (const field of ['user_name', 'password', 'full_name']) {
+      if (!req.body[field]) {
+        return res.status(400).json( { error: `Missing ${field} in request body`});
+      }
+    }
+
+    const { user_name, password, full_name, nickname } = req.body;
+
+
+    const newUser = {
+      user_name,
+      password,
+      full_name,
+      nickname
+    };
+    return res.status(201).json(newUser);
   });
 
 module.exports = authRouter;

@@ -1,6 +1,7 @@
 /* eslint-disable strict */
 const express = require('express');
 const AuthService = require('./auth-service');
+const xss = require('xss');
 
 const authRouter = express.Router();
 const jsonBodyParser = express.json();
@@ -58,15 +59,21 @@ authRouter
       .then(userNameTaken => {
         if (userNameTaken) {
           return res.status(400).json({ error: 'User name is already taken'});
-        } else {
-          const newUser = {
-            user_name,
-            password,
-            full_name,
-            nickname
-          };
-          return res.status(201).json(newUser);
         }
+        return AuthService.hashPassword(password)
+          .then(hash => {
+            const newUser = {
+              user_name: xss(user_name),
+              password: hash,
+              full_name: xss(full_name),
+              nickname: xss(nickname)
+            };
+            return AuthService.insertUser(req.app.get('db'), newUser)
+              .then(user => {
+                res.status(201).json(AuthService.serializeUser(user));
+              });
+          });       
+        
       });    
   
   });

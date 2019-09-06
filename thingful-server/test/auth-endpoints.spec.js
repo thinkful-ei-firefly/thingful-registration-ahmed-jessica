@@ -2,6 +2,7 @@ const knex = require('knex')
 const app = require('../src/app')
 const helpers = require('./test-helpers')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 
 describe.only('Auth Endpoints', function() {
   let db
@@ -91,22 +92,8 @@ describe.only('Auth Endpoints', function() {
       )
     )
 
-    const newUserValidCreds = {
-      user_name: 'ValidUserName',
-      password: 'Abc123DoReMi!',
-      full_name: 'John Doe',
-      nickname: 'John'
-    };
-
     const requiredFields = ['user_name', 'password', 'full_name'];
-
-    it('responds with 201 created when given valid data', () => {
-      return supertest(app)
-        .post('/api/auth/register')
-        .send(newUserValidCreds)
-        .expect(201)
-
-    })
+    
 
     requiredFields.forEach(field => {
       const registerAttemptBody = {
@@ -208,6 +195,47 @@ describe.only('Auth Endpoints', function() {
         .post('/api/auth/register')
         .send(registerAttemptDuplicateUser)
         .expect(400, {error: `User name is already taken`})
+    })
+
+    context ('happy path', () => {
+  
+      it('responds 201, serialized user, storing bcrypted password', () => {
+        
+        const newUser = {
+          user_name: 'ValidUserName',
+          password: 'Abc123DoReMi!',
+          full_name: 'John Doe',
+          nickname: 'John'
+        };
+
+        return supertest(app)
+          .post('/api/auth/register')
+          .send(newUser)
+          .expect(201)
+          .expect(res => {
+            db
+              .from('thingful_users')
+              .select('*')
+              .where({ id: res.body.id })
+              .first()
+              .then(row => {
+                expect(row.user_name).to.eql(newUser.user_name)
+                expect(row.full_name).to.eql(newUser.full_name)
+                expect(row.nickname).to.eql(newUser.nickname)
+                // expect(res.body).to.not.have.property('password')
+                // expect(res.headers.location).to.eql(`/api/auth/register/${res.body.id}`)
+                const expectedDate = new Date().toLocaleString('en', { timezone: 'UTC' })
+                const actualDate = new Date(res.body.date_created).toLocaleString()
+                // expect(actualDate).to.eql(expectedDate)
+
+                return bcrypt.compare(newUser.password, row.password)
+                  .then(compare => expect(compare).to.be.true)
+
+              })
+            
+          })
+  
+      })
     })
 
 
